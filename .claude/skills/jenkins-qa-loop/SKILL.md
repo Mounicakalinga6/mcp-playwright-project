@@ -83,4 +83,4 @@ Run 2 also happens, without a push, when the only failures were flaky / environm
 
 * Run 1: N passed / M failed. Run 2, if it ran: N passed / M failed.
 * Per failure: type, one-line cause, and what was done ("auto-fixed in PR #x", "re-run passed", "app bug, not changed", "not auto-fixed: <guardrail reason>").
-* If Run 2 still has failures: say so plainly. Don't start another run.
+* If Run 2 still has failures (network, timeout, app bug, API errors, anything): **just report them.** List the failed test names and errors from Run 2's Jenkins output. Don't triage again, don't fix, don't start another run. Two runs is the end.
