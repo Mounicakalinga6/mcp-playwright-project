@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "employee-db": {
+      "command": "node",
+      "args": ["mcp-server/mcpServer.js"]
+    },
+    "playwright-test": {
+      "command": "npx",
+      "args": ["playwright", "run-test-mcp-server"]
+    }
+  }
+}

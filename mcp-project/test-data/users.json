@@ -1,0 +1,11 @@
+{
+  "validAdmin": {
+    "username": "Admin",
+    "password": "admin123"
+  },
+  "invalidUsers": [
+    { "username": "Admin", "password": "wrongpass", "expectedError": "Invalid credentials" },
+    { "username": "", "password": "admin123", "expectedError": "Required" },
+    { "username": "Admin", "password": "", "expectedError": "Required" }
+  ]
+}

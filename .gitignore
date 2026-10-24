@@ -1,0 +1,16 @@
+
+# Dependencies
+node_modules/
+
+# Secrets — each machine keeps its own
+.env
+
+# Saved OrangeHRM login sessions (regenerate with `npm run auth:refresh`)
+playwright/.auth/
+
+# Claude Code per-machine settings
+.claude/settings.local.json
+
+# OS / crash files
+.DS_Store
+*.stackdump

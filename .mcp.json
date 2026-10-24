@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "employee-db": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "mcp-project/mcp-server/mcpServer.js"
+      ],
+      "env": {}
+    },
+    "qa-agent-readonly": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "mcp-project/mcp-server/qaAgentServer.js"
+      ],
+      "env": {}
+    },
+    "playwright-test": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "cd mcp-project && exec node node_modules/playwright/cli.js run-test-mcp-server --config playwright.config.js"
+      ],
+      "env": {}
+    }
+  }
+}

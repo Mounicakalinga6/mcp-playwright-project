@@ -1,0 +1,36 @@
+{
+  "name": "mcp-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:login": "playwright test tests/login.spec.js",
+    "test:pim": "playwright test tests/pim-addEmployee.spec.js",
+    "test:admin": "playwright test tests/admin-addUser.spec.js",
+    "auth:refresh": "node -e \"process.env.GLOBAL_SETUP_FORCE_REFRESH='1'; import('./config/global-setup.js').then(m => m.default())\"",
+    "db:check": "node -e \"import('./utils/dbClient.js').then(async m => { const r = await m.query('SELECT NOW()'); console.log('DB connected. Server time:', r.rows[0].now); await m.closePool(); }).catch(e => { console.error('DB connection failed:', e.message); process.exit(1); })\"",
+    "mcp:test": "node mcp-server/manualToolCheck.js",
+    "qa:check": "node mcp-server/qaAgentToolCheck.js",
+    "report": "playwright show-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
+    "@types/pg": "^8.23.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "dotenv": "^16.4.5",
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
+  }
+}

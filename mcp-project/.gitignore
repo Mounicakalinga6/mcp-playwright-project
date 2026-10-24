@@ -1,0 +1,14 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# JUnit / JSON results (Jenkins, or copied from Jenkins for triage)
+/results/
+
+# Environment
+.env
