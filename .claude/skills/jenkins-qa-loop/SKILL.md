@@ -1,87 +1,86 @@
 ---
 name: jenkins-qa-loop
-description: Run the Playwright suite in Jenkins, triage any failures with the ci-triage-agent, heal genuine test bugs on a branch with guardrails, get the user's approval, merge, and re-run Jenkins. Use when the user says "run in Jenkins", "run the tests in CI", or asks for the QA loop.
+description: Run the Playwright suite in Jenkins; if anything fails, triage it with the ci-triage-agent, auto-fix genuine test bugs behind guardrails, push, and re-run once. At most 2 Jenkins runs, no approval step. Use when the user says "run in Jenkins", "run the tests in CI", or asks for the QA loop.
 ---
 
-# Jenkins QA loop
+# Jenkins QA loop (fully automatic, max 2 runs)
 
-Run → triage → heal (test bugs only) → guardrail check → user approval → merge → re-run.
-Jenkins emails the user a report after every run, so there's no need to send one.
+Run 1 → (only if failures) triage → auto-fix test bugs → push → Run 2 → stop.
+Jenkins emails the user after every run, so the user gets at most 2 emails. Don't ask the user for approval at any step. The guardrails in step 4 replace the human check.
 
-## 1. Run Jenkins
+**Hard limits** (they keep token use on the user's work account low):
+
+* At most **2 Jenkins runs** per request. Never start a third.
+* Heal at most **3 specs** per request. If more than 3 specs are classified as test bugs, something systemic is wrong (usually the demo site), so fix nothing and report.
+* At most **one healer attempt per spec**. No retry loops.
+
+## 1. Run 1
 
 ```sh
 ci/run-jenkins.sh
 ```
 
-It waits for the build, prints the summary (`Finished: SUCCESS | UNSTABLE | FAILURE`) and copies that run's `results/` and `test-results/` into `mcp-project/`.
-
-* `SUCCESS`: report the pass count to the user. Done.
-* `FAILURE` with no test results (setup broke, e.g. `npm ci` or DB reset): report the failing stage from the Jenkins log and stop. Don't touch code.
+* `SUCCESS`: tell the user "N/N passed" in one line. **Stop.** No triage, no further tokens.
+* `FAILURE` with no test results (setup broke, e.g. `npm ci` or DB reset): report the failing stage from the Jenkins log and stop. No re-run, no code change.
 * `UNSTABLE` (some tests failed): go to step 2.
 
 ## 2. Triage (read-only)
 
-Spawn the `ci-triage-agent` subagent: "Triage the failed tests from the latest Jenkins run." Show the user its summary: each failure with Type, Confidence and Why.
+Spawn the `ci-triage-agent` subagent: "Triage the failed tests from the latest Jenkins run." Keep its summary for the final report.
 
-Decide per failure:
+Per failure:
 
 | Type | Action |
 |---|---|
-| Flaky / environment | No code change. Re-run step 1 **once**. If it fails again, report it and stop for that test. |
-| App bug | No code change. Report it with the evidence. Never "fix" the test to hide it. |
-| Unclear, or Low confidence | No code change. Report it and ask the user. |
-| Test bug, High or Medium confidence | Go to step 3. |
+| Flaky / environment | No code change. Run 2 doubles as the re-run. |
+| App bug | No code change. Report it. Never weaken the test to hide it. |
+| Unclear, or Low confidence | No code change. Report it. |
+| Test bug, High or Medium confidence | Fix it in step 3 (within the 3-spec limit). |
 
-## 3. Heal on a branch
+If nothing qualifies for a fix and every failure is an app bug or unclear, **skip Run 2** (it would fail the same way) and go to step 6.
+
+## 3. Fix on a branch
 
 ```sh
 git checkout main && git pull --ff-only
 git checkout -b fix/<YYYY-MM-DD>-<short-name>
 ```
 
-Spawn `playwright-test-healer` with a narrow task. Name the failing spec file(s) and paste the triage reasoning. Include these constraints in its prompt:
+Spawn `playwright-test-healer` once per spec with a narrow task. Name the spec, paste the triage reasoning, and include these constraints:
 
-* Fix only these specs. Edit only `mcp-project/tests/`, `pages/`, `locators/`, `utils/` or `test-data/`.
+* Fix only this spec. Edit only `mcp-project/tests/`, `pages/`, `locators/`, `utils/` or `test-data/`.
 * Don't use `test.fixme` or `test.skip`, and don't delete an assertion.
-* Change what an assertion checks only if the triage says the assertion's expectation itself is wrong. Explain why in a code comment.
+* Change what an assertion checks only if the triage says the expectation itself is wrong. Explain why in a code comment.
+* Make one focused attempt. If it can't be fixed cleanly, stop and say why.
 
-## 4. Guardrail check (you, not the healer)
+## 4. Guardrails (automatic, strict)
 
 ```sh
-git diff main --stat
-git diff main | grep -nE '^\+.*test\.(fixme|skip)\(' && echo "BLOCK: skip/fixme added"
-git diff main | grep -nE '^-.*expect\(' && echo "REVIEW: an expect() was removed or changed"
-git diff main --name-only | grep -vE '^mcp-project/(tests|pages|locators|utils|test-data)/' && echo "BLOCK: file outside allowed dirs"
+git diff main --name-only
+git diff main | grep -nE '^\+.*test\.(fixme|skip)\('            # any hit → reject
+git diff main | grep -nE '^-.*expect\('                          # any hit → reject
+git diff main --name-only | grep -vE '^mcp-project/(tests|pages|locators|utils|test-data)/'   # any hit → reject
+cd mcp-project && npx playwright test <each fixed spec> --repeat-each=2   # must pass
 ```
 
-* **BLOCK**: discard the change (`git checkout main && git branch -D <branch>`) and report why.
-* **REVIEW**: keep the change only if every removed `expect` is replaced by one that checks the same behaviour. Say so explicitly to the user.
+If any check fails for a spec, discard that spec's change (`git checkout main -- <files>`) and list it as "not auto-fixed" with the reason. If nothing is left to commit, delete the branch and continue to step 5 without a push.
 
-Then prove the fix locally, twice in a row:
+## 5. Push, then Run 2
 
-```sh
-cd mcp-project && npx playwright test <spec> --repeat-each=2
-```
-
-## 5. PR and approval
-
-Commit (message says what was wrong and why the fix is correct), push the branch, and open a PR:
+Use a PR for the record, then merge it right away:
 
 ```sh
+git add -A && git commit -m "fix(tests): <what> (auto-fix after Jenkins triage)"
 git push -u origin HEAD
-gh pr create --base main --title "fix(tests): <what>" --body "<triage summary + why this fix doesn't hide a bug + local run result>"
-```
-
-Show the user the PR link, the diff summary and the guardrail result. **Ask for approval. Don't merge without it.**
-
-## 6. Merge and re-run
-
-On approval:
-
-```sh
+gh pr create --base main --title "fix(tests): <what>" --body "<triage summary, why the fix doesn't hide a bug, local run result>"
 gh pr merge --squash --delete-branch && git checkout main && git pull --ff-only
 ci/run-jenkins.sh
 ```
 
-Report the final result. If it's still failing, go back to step 2 once. After the second attempt, stop and report: never loop more than twice.
+Run 2 also happens, without a push, when the only failures were flaky / environment.
+
+## 6. Final report (one message, then stop)
+
+* Run 1: N passed / M failed. Run 2, if it ran: N passed / M failed.
+* Per failure: type, one-line cause, and what was done ("auto-fixed in PR #x", "re-run passed", "app bug, not changed", "not auto-fixed: <guardrail reason>").
+* If Run 2 still has failures: say so plainly. Don't start another run.
