@@ -10,8 +10,9 @@ Personal learning project:
   dedicated CI database first, publishes the HTML report, and emails the result.
 - **MCP servers + AI agents** for Claude Code: a read-only QA agent, a CI
   failure-triage agent, Playwright's official planner / generator / healer
-  agents, and a `jenkins-qa-loop` skill that ties them together with
-  guardrails so a "fix" can never hide a real bug.
+  agents, a fix-verifier agent, a learning engine that remembers past runs,
+  and a `jenkins-qa-loop` skill that ties them together with guardrails so a
+  "fix" can never hide a real bug.
 
 ## How the AI agents fit together
 
@@ -19,11 +20,12 @@ Personal learning project:
 "run in Jenkins"
    │
    ▼
-ci/run-jenkins.sh ──► Jenkins: npm ci → reset CI DB → 35 tests → report + email
+ci/run-jenkins.sh ──► Jenkins: npm ci → reset CI DB → 38 tests → report + email
+   │                  then learning engine: record run → results/test-history.md
    │
    ├── all passed ─────────────────────────────────────────► done
    │
-   └── failures ─► ci-triage-agent (read-only)
+   └── failures ─► ci-triage-agent (read-only, reads the run history)
                      classifies each failure:
                      ├─ flaky / environment ─► re-run once, no code change
                      ├─ app bug ─────────────► reported, never "fixed" in the test
@@ -33,9 +35,11 @@ ci/run-jenkins.sh ──► Jenkins: npm ci → reset CI DB → 35 tests → rep
                                 guardrail diff check: no test.skip / fixme,
                                 no removed expect(), only test dirs touched
                                                   │
-                                re-run locally ×2 → PR → human approves
+                                re-run locally ×2
                                                   │
-                                merge → Jenkins re-run → report
+                                fix-verifier-agent (read-only): APPROVE / REJECT
+                                                  │
+                                PR → human merges → Jenkins re-run → report
 ```
 
 | Agent / server | Where | Can change code? |
@@ -45,7 +49,9 @@ ci/run-jenkins.sh ──► Jenkins: npm ci → reset CI DB → 35 tests → rep
 | `playwright-test-planner` | `.claude/agents/` (official, `npx playwright init-agents`) | Writes test plans to `specs/` |
 | `playwright-test-generator` | same | Writes new specs from a plan |
 | `playwright-test-healer` | same | Edits failing tests, only on a branch via the loop |
-| `jenkins-qa-loop` skill | `.claude/skills/` | Orchestrates the above; merges only after human approval |
+| `fix-verifier-agent` | `.claude/agents/` | No, Read / Grep / Glob only. Approves or rejects each healer fix |
+| Learning engine | `ci/test-history.mjs` | No. Records every Jenkins run in `ci/history/` (gitignored) and writes `results/test-history.md` for triage |
+| `jenkins-qa-loop` skill | `.claude/skills/` | Orchestrates the above; the human merges every fix PR |
 | `employee-db` MCP server | `mcp-server/mcpServer.js` | Full CRUD on the practice DB (manual use only) |
 | `playwright-test` MCP server | `npx playwright run-test-mcp-server` | Browser + test runner tools for the official agents |
 
@@ -57,10 +63,11 @@ The project spans two levels. Keep both when copying it to another machine:
 MCP_Project/                      <- open Claude Code / VS Code HERE
 ├── .mcp.json                     MCP servers for Claude Code
 ├── .claude/
-│   ├── agents/                   QA, triage, planner, generator, healer agents
-│   └── skills/jenkins-qa-loop/   run → triage → heal → approve → re-run
+│   ├── agents/                   QA, triage, planner, generator, healer, verifier agents
+│   └── skills/jenkins-qa-loop/   run → triage → heal → verify → merge → re-run
 ├── Jenkinsfile                   CI pipeline
 ├── ci/run-jenkins.sh             trigger Jenkins + collect results for triage
+├── ci/test-history.mjs           learning engine: run history for triage
 └── mcp-project/                  <- run npm / npx commands HERE
     ├── config/global-setup.js    logs in once, saves the session
     ├── db/setup.sql              creates + seeds the employees table

@@ -16,6 +16,7 @@ Evidence, all under `mcp-project/`:
 
 * `results/results.json`: Playwright JSON report (every attempt, errors, file:line). Use `results/junit.xml` if it's missing.
 * `test-results/**/error-context.md`: page snapshot or error context per failed attempt.
+* `results/test-history.md`: the learning engine's summary of recent Jenkins runs. For each test that failed or was flaky, it gives a pattern (NEW, CONSISTENT, INTERMITTENT or FIRST RUN), a pass/fail timeline and failure kinds. It may be missing on a new machine.
 * `tests/`, `pages/`, `locators/`, `utils/`: the code under test.
 
 Steps:
@@ -28,6 +29,12 @@ Steps:
    * **Flaky / environment**: timing, network, the shared demo being slow or changed by other users, an expired session, or the database being unavailable.
    * **Unclear**: the evidence doesn't support one answer.
 4. Give a confidence (High / Medium / Low) and the evidence behind it. Compare retries: different data on each attempt points to a shared-data or ordering problem.
+5. Check the test's line in `results/test-history.md` and weigh it with the error:
+   * INTERMITTENT, mostly timeouts: supports Flaky / environment.
+   * NEW: something changed recently (code, app or data). Look for the change before calling it flaky.
+   * CONSISTENT: a lasting problem. Argues against Flaky.
+   * Missing file or FIRST RUN: say "no history". Never invent a history.
+   History alone never decides the type. The error and the code come first.
 
 Rules:
 
@@ -47,6 +54,7 @@ Output: only an HTML fragment (no `<html>`, `<head>`, `<script>` or `<style>` ta
      <b>Type:</b> Test bug &middot; <b>Confidence:</b> High</p>
   <p><b>What happened:</b> one or two sentences, quoting the key error.</p>
   <p><b>Why:</b> the root cause, citing the evidence (retries, data, code).</p>
+  <p><b>History:</b> the pattern and timeline from results/test-history.md, or "no history".</p>
   <p><b>Suggested fix:</b> a concrete change with file:line, or "No code change: re-run / check environment".</p>
 </div>
 <p><i>Read-only analysis. No code was changed.</i></p>

@@ -12,19 +12,21 @@ Model Context Protocol (MCP) to triage and heal failures **without hiding real b
 | **DB tests** | PostgreSQL via `pg`, parameterised queries through a repository layer, UI → DB end-to-end check |
 | **CI** | `Jenkinsfile`: runs after every push, resets a dedicated CI database, publishes the HTML report, emails the result |
 | **MCP servers** | `employee-db` (CRUD tools), `qa-agent-readonly` (allow-listed test runs), official `playwright-test` |
-| **AI agents** | Read-only QA agent, CI triage agent, Playwright planner / generator / healer, and a `jenkins-qa-loop` skill with guardrails and a human approval step |
+| **AI agents** | Read-only QA agent, CI triage agent, Playwright planner / generator / healer, fix-verifier agent, a learning engine (run history for triage), and a `jenkins-qa-loop` skill with guardrails and a human merge step |
 
 ## The AI QA loop
 
 ```
-run Jenkins ─► failures? ─► ci-triage-agent (read-only) classifies each one
+run Jenkins ─► history recorded ─► failures? ─► ci-triage-agent (read-only, reads history) classifies each one
                               ├─ flaky / environment ─► re-run once
                               ├─ app bug ────────────► reported, never patched over
                               └─ test bug ───────────► healer fixes it on a branch
                                                           ▼
-                     guardrails: no test.skip/fixme, no removed expect(), test dirs only
+                     guardrails: no test.skip/fixme, no removed expect(), test dirs only, local re-run ×2
                                                           ▼
-                          local re-run ×2 ─► PR ─► human approves ─► merge ─► Jenkins re-run
+                     fix-verifier-agent (read-only): does the fix still check the same behaviour?
+                                                          ▼
+                                    PR ─► human merges ─► Jenkins re-run
 ```
 
 Design choices:

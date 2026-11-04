@@ -14,3 +14,9 @@ playwright/.auth/
 # OS / crash files
 .DS_Store
 *.stackdump
+
+# Learning engine: per-machine Jenkins run history (ci/test-history.mjs)
+ci/history/
+
+# Page snapshots written by the playwright-test MCP server
+.playwright-mcp/
