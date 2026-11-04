@@ -31,4 +31,13 @@ WS=$JHOME/workspace/$JOB/mcp-project
 rm -rf "$ROOT/mcp-project/results" "$ROOT/mcp-project/test-results"
 cp -R "$WS/results" "$ROOT/mcp-project/results" 2>/dev/null || true
 cp -R "$WS/test-results" "$ROOT/mcp-project/test-results" 2>/dev/null || true
+
+# Learning engine: remember this run, then write the history summary the
+# ci-triage-agent reads. Only record when tests actually ran: a build that broke
+# before the Test stage leaves the previous run's results in the workspace.
+BUILD=$(sed -n 's/^Started .* #\([0-9][0-9]*\)$/\1/p' "$log" | head -1)
+if grep -qE 'Running [0-9]+ tests?' "$log" && [ -f "$ROOT/mcp-project/results/results.json" ]; then
+  node "$ROOT/ci/test-history.mjs" record "$ROOT/mcp-project/results/results.json" "$BUILD" || true
+fi
+node "$ROOT/ci/test-history.mjs" summary "$ROOT/mcp-project/results/test-history.md" || true
 rm -f "$log"
