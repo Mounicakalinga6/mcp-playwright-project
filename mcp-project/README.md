@@ -72,8 +72,7 @@ MCP_Project/                      <- open Claude Code / VS Code HERE
     ├── test-data/  utils/
     ├── playwright.config.js      main config (OrangeHRM, Chromium only)
     ├── playwright.db.config.js   DB-only + self-check config (no login)
-    ├── .env.example              copy to .env and fill in
-    └── .mcp.json                 employee-db only, if opened at mcp-project/
+    └── .env.example              copy to .env and fill in
 ```
 
 ## Setup on a new machine
