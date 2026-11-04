@@ -21,8 +21,13 @@ test.describe('Employees API: contract, paging, sorting, filtering', () => {
   });
 
   test('pagination: limit is respected and pages do not overlap', async ({ request }) => {
-    const page1 = employeeList.parse(await (await request.get(`${EMPLOYEES}?limit=5&offset=0`)).json());
-    const page2 = employeeList.parse(await (await request.get(`${EMPLOYEES}?limit=5&offset=5`)).json());
+    // Sort by the unique empNumber. Without an explicit sort, the API orders by
+    // name, and the shared demo has many employees with the identical name
+    // "PT_User 001". Ties have no fixed order, so the same rows can appear on
+    // both pages between calls (observed 2026-11-04, Jenkins build #14).
+    const STABLE_SORT = 'sortField=employee.empNumber&sortOrder=ASC';
+    const page1 = employeeList.parse(await (await request.get(`${EMPLOYEES}?limit=5&offset=0&${STABLE_SORT}`)).json());
+    const page2 = employeeList.parse(await (await request.get(`${EMPLOYEES}?limit=5&offset=5&${STABLE_SORT}`)).json());
 
     expect(page1.data.length).toBeLessThanOrEqual(5);
     expect(page2.data.length).toBeLessThanOrEqual(5);
