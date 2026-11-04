@@ -1,7 +1,0 @@
-{
-  "sampleEmployees": [
-    { "firstName": "Priya", "lastName": "Ramesh" },
-    { "firstName": "John", "lastName": "Carter" },
-    { "firstName": "Aiko", "lastName": "Tanaka" }
-  ]
-}
