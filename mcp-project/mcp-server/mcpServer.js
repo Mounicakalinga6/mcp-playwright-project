@@ -14,9 +14,8 @@ import { runPlaywrightTest, RUNNABLE_TEST_TARGETS } from './playwrightTestExecut
 
 /**
  * Builds the MCP server and registers its tools. Exported as a factory
- * (instead of connecting a transport here directly) so manualToolCheck.js
- * can create the same server and talk to it in-memory, without needing a
- * real AI client like Claude Desktop connected yet.
+ * (instead of connecting a transport here directly) so a script can create
+ * the same server and talk to it in-memory, without a real AI client.
  */
 export function createServer() {
   const server = new McpServer({ name: 'mcp-project-employees', version: '1.0.0' });
@@ -123,8 +122,7 @@ export function createServer() {
 }
 
 // Only start listening on stdio when this file is run directly (e.g. by an
-// MCP client like Claude Desktop) — not when createServer() is imported for
-// the in-memory check in manualToolCheck.js.
+// MCP client like Claude Code) — not when createServer() is imported elsewhere.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const server = createServer();
   const transport = new StdioServerTransport();

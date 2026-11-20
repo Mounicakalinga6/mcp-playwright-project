@@ -2,7 +2,6 @@
   "name": "mcp-project",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "type": "module",
   "scripts": {
     "test": "playwright test",
@@ -13,8 +12,6 @@
     "test:admin": "playwright test tests/admin-addUser.spec.js",
     "auth:refresh": "node -e \"process.env.GLOBAL_SETUP_FORCE_REFRESH='1'; import('./config/global-setup.js').then(m => m.default())\"",
     "db:check": "node -e \"import('./utils/dbClient.js').then(async m => { const r = await m.query('SELECT NOW()'); console.log('DB connected. Server time:', r.rows[0].now); await m.closePool(); }).catch(e => { console.error('DB connection failed:', e.message); process.exit(1); })\"",
-    "mcp:test": "node mcp-server/manualToolCheck.js",
-    "qa:check": "node mcp-server/qaAgentToolCheck.js",
     "report": "playwright show-report"
   },
   "keywords": [],

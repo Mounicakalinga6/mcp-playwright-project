@@ -29,18 +29,6 @@ function isSavedSessionFresh() {
  * GLOBAL_SETUP_FORCE_REFRESH=1 to force a fresh login regardless.
  */
 export default async function globalSetup() {
-  // Set by the read-only QA agent: it must never log in or overwrite the
-  // saved session itself. Takes precedence over GLOBAL_SETUP_FORCE_REFRESH.
-  if (process.env.GLOBAL_SETUP_NO_REFRESH) {
-    if (isSavedSessionFresh()) {
-      logInfo(`Reusing saved session from ${AUTH_FILE} (no-refresh mode)`);
-      return;
-    }
-    throw new Error(
-      'Saved OrangeHRM session is missing or stale. Ask the user to run `npm run auth:refresh` manually.'
-    );
-  }
-
   if (!process.env.GLOBAL_SETUP_FORCE_REFRESH && isSavedSessionFresh()) {
     logInfo(`Reusing saved session from ${AUTH_FILE} (still fresh, skipping login)`);
     return;
