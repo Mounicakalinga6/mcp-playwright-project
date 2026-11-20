@@ -11,8 +11,8 @@ Model Context Protocol (MCP) to triage and heal failures **without hiding real b
 | **API tests** | Contract checks with Zod schemas, paging, sorting, filtering, error codes, auth (401), no password leakage |
 | **DB tests** | PostgreSQL via `pg`, parameterised queries through a repository layer, UI → DB end-to-end check |
 | **CI** | `Jenkinsfile`: runs after every push, resets a dedicated CI database, publishes the HTML report, emails the result |
-| **MCP servers** | `employee-db` (CRUD tools), `qa-agent-readonly` (allow-listed test runs), official `playwright-test` |
-| **AI agents** | Read-only QA agent, CI triage agent, Playwright planner / generator / healer, fix-verifier agent, a learning engine (run history for triage), and a `jenkins-qa-loop` skill with guardrails and a human merge step |
+| **MCP servers** | `employee-db` (CRUD tools + allow-listed test runner), official `playwright-test` |
+| **AI agents** | CI triage agent, Playwright planner / generator / healer, fix-verifier agent, a learning engine (run history for triage), and a `jenkins-qa-loop` skill with guardrails and a human merge step |
 
 ## The AI QA loop
 
@@ -34,8 +34,8 @@ Design choices:
 * **Triage before repair.** An agent that "fixes" every red test will eventually
   weaken an assertion and hide a real defect, so classification comes first and
   only confirmed test bugs are healed.
-* **Least privilege.** The triage agent can only read files. The QA agent can run
-  only three reviewed, non-mutating specs. Write access goes through a branch, a PR and a human.
+* **Least privilege.** The triage and verifier agents can only read files.
+  Write access goes through a branch, a PR and a human.
 * **Deterministic CI data.** Jenkins rebuilds a separate `playwrightdb_ci`
   database from `db/setup.sql` before every run.
 

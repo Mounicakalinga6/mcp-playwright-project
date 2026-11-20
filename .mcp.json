@@ -8,14 +8,6 @@
       ],
       "env": {}
     },
-    "qa-agent-readonly": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "mcp-project/mcp-server/qaAgentServer.js"
-      ],
-      "env": {}
-    },
     "playwright-test": {
       "type": "stdio",
       "command": "sh",

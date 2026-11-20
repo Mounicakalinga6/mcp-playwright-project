@@ -93,7 +93,7 @@ function attachmentPath(attachments, name) {
 function collectDetailedFailures(suites, parentTitles = [], failures = [], isFileLevel = true) {
   for (const suite of suites) {
     // Top-level suites are the spec files themselves; their title is the
-    // file path (e.g. "tests-selfcheck\\x.spec.js"), which `location` already
+    // file path (e.g. "tests\\x.spec.js"), which `location` already
     // carries — skip it by position, since comparing names misses paths.
     const titles = isFileLevel ? parentTitles : [...parentTitles, suite.title];
     for (const spec of suite.specs ?? []) {
@@ -201,12 +201,10 @@ async function verifyEvidence(failures) {
  * original command and output shape.
  * @param {string} target — one of RUNNABLE_TEST_TARGETS, or a QA catalog target
  *   (callers validate it against their own fixed allowlist first)
- * @param {{ detailed?: boolean, traceOnFailure?: boolean, noAuthRefresh?: boolean,
+ * @param {{ detailed?: boolean, traceOnFailure?: boolean,
  *           configFile?: string | null, testPath?: string | null, project?: string | null }} [options]
  *   detailed       — richer failure objects (location, verified screenshot/trace paths)
  *   traceOnFailure — adds --trace=retain-on-failure for this run only
- *   noAuthRefresh  — global setup fails instead of logging in when the saved
- *                    session is missing/stale (never touches credentials)
  *   configFile     — alternate Playwright config, relative to the project
  *                    root (e.g. playwright.db.config.js); default config if unset
  *   testPath       — spec path relative to the project root; default `tests/${target}`
@@ -216,7 +214,6 @@ export async function runPlaywrightTest(target, options = {}) {
   const {
     detailed = false,
     traceOnFailure = false,
-    noAuthRefresh = false,
     configFile = null,
     testPath = null,
     project = null,
@@ -258,9 +255,6 @@ export async function runPlaywrightTest(target, options = {}) {
 
   /** @type {NodeJS.ProcessEnv} */
   const env = { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: outputFile };
-  if (noAuthRefresh) {
-    env.GLOBAL_SETUP_NO_REFRESH = '1';
-  }
 
   let stderr = '';
   try {

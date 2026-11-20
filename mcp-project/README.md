@@ -8,8 +8,7 @@ Personal learning project:
 - **PostgreSQL tests** against a local `employees` table, via `pg`.
 - **Jenkins CI** (`../Jenkinsfile`): runs the suite after every push, resets a
   dedicated CI database first, publishes the HTML report, and emails the result.
-- **MCP servers + AI agents** for Claude Code: a read-only QA agent, a CI
-  failure-triage agent, Playwright's official planner / generator / healer
+- **MCP servers + AI agents** for Claude Code: a CI failure-triage agent, Playwright's official planner / generator / healer
   agents, a fix-verifier agent, a learning engine that remembers past runs,
   and a `jenkins-qa-loop` skill that ties them together with guardrails so a
   "fix" can never hide a real bug.
@@ -44,7 +43,6 @@ ci/run-jenkins.sh ──► Jenkins: npm ci → reset CI DB → 38 tests → rep
 
 | Agent / server | Where | Can change code? |
 |---|---|---|
-| `playwright-qa-agent` | `.claude/agents/` → `qa-agent-readonly` MCP server | No, runs only 3 reviewed read-only specs |
 | `ci-triage-agent` | `.claude/agents/` | No, tools are Read / Grep / Glob only |
 | `playwright-test-planner` | `.claude/agents/` (official, `npx playwright init-agents`) | Writes test plans to `specs/` |
 | `playwright-test-generator` | same | Writes new specs from a plan |
@@ -72,15 +70,13 @@ MCP_Project/                      <- open Claude Code / VS Code HERE
     ├── config/global-setup.js    logs in once, saves the session
     ├── db/setup.sql              creates + seeds the employees table
     ├── locators/  pages/         Page Object Model
-    ├── mcp-server/               MCP servers, test executor, self-checks
+    ├── mcp-server/               employee-db MCP server + test executor
     ├── specs/                    test plans written by the planner agent
     ├── tests/                    Playwright specs
-    ├── tests-selfcheck/          intentional-failure spec for the QA agent
     ├── test-data/  utils/
     ├── playwright.config.js      main config (OrangeHRM, Chromium only)
-    ├── playwright.db.config.js   DB-only + self-check config (no login)
-    ├── .env.example              copy to .env and fill in
-    └── .mcp.json                 employee-db only, if opened at mcp-project/
+    ├── playwright.db.config.js   DB-only config (no login)
+    └── .env.example              copy to .env and fill in
 ```
 
 ## Setup on a new machine
@@ -145,14 +141,12 @@ to the 8 seed rows.
 ```bash
 npm run db:check                                   # prints "DB connected"
 npx playwright test --config=playwright.db.config.js --project=db-only
-npm run mcp:test                                   # MCP server reads employee 1
-npm run qa:check                                   # QA agent server self-checks
 ```
 
 ### 6. Use the MCP servers in Claude Code
 
 Open **`MCP_Project/`** (the parent folder) in VS Code / Claude Code, so it
-picks up the root `.mcp.json` and the QA agent. If Node was just installed,
+picks up the root `.mcp.json` and the agents. If Node was just installed,
 reload the window first (Cmd/Ctrl+Shift+P → *Developer: Reload Window*).
 
 ## npm scripts
@@ -167,8 +161,6 @@ stored at the relative path `playwright/.auth/admin.json`.
 | `npm run test:login` / `test:pim` / `test:admin` | one UI spec |
 | `npm run auth:refresh` | force a fresh OrangeHRM login and save the session |
 | `npm run db:check` | `SELECT NOW()` connection check |
-| `npm run mcp:test` | calls `get_employee_by_id` on the employee-db server |
-| `npm run qa:check` | stub-based checks of the qa-agent-readonly server |
 | `npm run report` | open the last HTML report |
 
 The saved session is reused for 30 minutes, then global setup logs in again.
@@ -190,8 +182,6 @@ The saved session is reused for 30 minutes, then global setup logs in again.
 | Server | Tools | Can write? |
 |---|---|---|
 | `employee-db` (`mcp-server/mcpServer.js`) | get all / by id, create, update salary, delete, run a spec (or `all`) | **yes** |
-| `qa-agent-readonly` (`mcp-server/qaAgentServer.js`) | list test targets, run a reviewed spec, get all / by id | no |
+| `playwright-test` (official, `npx playwright run-test-mcp-server`) | browser + test runner tools for the planner / generator / healer agents | via the healer, on a branch only |
 
-The `playwright-qa-agent` only uses `qa-agent-readonly`, and can only run
-`db-read`, `api-employees` and the intentional-failure self-check (see
-`mcp-server/qaTestCatalog.js`).
+`employee-db`'s test runner accepts only a fixed list of spec names (or `all`), never a free-text command.
